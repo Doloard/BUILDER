@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kerala House &amp; Plot Planner — 2D Customizer &amp; 3D Top-Down Studio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .grid-bg {
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+    }
+    .room-box {
+      touch-action: none;
+      user-select: none;
+      transition: box-shadow 0.12s ease;
+    }
+    .room-box.selected {
+      box-shadow: 0 0 0 2.5px #2563eb, 0 8px 20px -4px rgba(37, 99, 235, 0.25);
+      z-index: 30;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+  <!-- PAGE 1: Clean White Sign-In Card -->
+  <div id="landing-gate" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-zinc-900">
+    <div class="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-lg p-8 flex flex-col justify-center space-y-5">
+        <div>
+          <h1 class="text-lg font-bold text-slate-900">Sign In</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Enter your details to open the house planner.</p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label for="gate-name" class="block font-medium text-slate-700 mb-1">Full Name</label>
+            <input id="gate-name" type="text" placeholder="e.g. Arjun Nair" class="w-full border border-slate-300 rounded-xl px-3 py-2.5">
+          </div>
+          <div>
+            <label for="gate-email" class="block font-medium text-slate-700 mb-1">Google Gmail / Email ID</label>
+            <input id="gate-email" type="email" placeholder="yourname@gmail.com" class="w-full border border-slate-300 rounded-xl px-3 py-2.5">
+          </div>
+          <div>
+            <label for="gate-pass" class="block font-medium text-slate-700 mb-1">Password</label>
+            <input id="gate-pass" type="password" placeholder="Create or enter password" class="w-full border border-slate-300 rounded-xl px-3 py-2.5">
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <button id="btn-gate-signin" type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 rounded-xl shadow-sm">
+            Sign In &amp; Continue
+          </button>
+          <button id="btn-gate-google" type="button" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2">
+            <span>Continue with Demo Account</span>
+          </button>
+        </div>
+    </div>
+  </div>
+
+  <!-- Top Header & Live Metrics (Hidden until signed in) -->
+  <header id="portal-header" class="hidden bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">KP</div>
+        <div>
+          <h1 class="text-base font-bold text-slate-900 leading-tight">Kerala Plot &amp; House Portal</h1>
+          <p class="text-xs text-slate-500">2D/3D Studio · Client Inquiries · Admin Desk</p>
+        </div>
+      </div>
+
+      <!-- Portal Mode Switcher -->
+      <nav class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl" aria-label="Portal sections">
+        <button id="nav-studio" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm">Design Studio</button>
+        <button id="nav-client" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">Inquiry &amp; Chat</button>
+        <button id="nav-admin" type="button" class="hidden px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">Admin Panel</button>
+        <button id="btn-header-logout" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50">Sign Out</button>
+      </nav>
+
+      <!-- Live Metrics Strip -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
+        <div class="bg-slate-100 rounded-lg px-3 py-1.5">
+          <span class="text-slate-500 block">Plot Size</span>
+          <span class="font-semibold text-slate-900" id="metric-plot">6.0 Cents (2,614 sq ft)</span>
+        </div>
+        <div class="bg-slate-100 rounded-lg px-3 py-1.5" id="metric-cov-box">
+          <span class="text-slate-500 block">Ground Footprint</span>
+          <span class="font-semibold text-slate-900" id="metric-cov">930 sq ft (36%)</span>
+        </div>
+        <div class="bg-slate-100 rounded-lg px-3 py-1.5">
+          <span class="text-slate-500 block">Total Built-Up</span>
+          <span class="font-semibold text-slate-900" id="metric-total">1,570 sq ft</span>
+        </div>
+        <div class="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
+          <span class="text-blue-600 block">Est. Cost (2026 / 2036)</span>
+          <span class="font-semibold text-blue-900" id="metric-cost">₹39.3L / ₹73.7L</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Design Studio -->
+  <div id="section-studio" class="hidden max-w-7xl w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4">
+
+    <!-- Left Sidebar: Plot & Specs Generator -->
+    <aside class="lg:col-span-3 space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
+        <h2 class="text-sm font-semibold text-slate-900">1. Plot &amp; Coverage</h2>
+
+        <div>
+          <div class="flex justify-between items-center text-xs mb-1 gap-2">
+            <label for="in-cents" class="font-medium text-slate-700">Plot Area (Cents)</label>
+            <div class="flex items-center gap-1">
+              <input id="in-cents-num" type="number" min="2" max="50" step="0.5" value="6" class="w-16 text-right font-semibold text-blue-600 border border-slate-300 rounded px-1.5 py-0.5 text-xs">
+              <span class="text-slate-500 text-[11px]" id="lbl-cents">cents</span>
+            </div>
+          </div>
+          <input id="in-cents" type="range" min="2" max="50" step="0.5" value="6" class="w-full accent-blue-600">
+          <div class="flex justify-between text-[11px] text-slate-400 mt-0.5">
+            <span>2 cents</span>
+            <span id="lbl-plot-dims">~51 × 51 ft</span>
+            <span>50 cents</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <label for="in-cov" class="font-medium text-slate-700">Max House Coverage</label>
+            <span class="font-semibold text-emerald-600" id="lbl-cov">60% (40% Yard)</span>
+          </div>
+          <input id="in-cov" type="range" min="30" max="100" step="5" value="60" class="w-full accent-emerald-600">
+        </div>
+
+        <div>
+          <label for="in-floors" class="block text-xs font-medium text-slate-700 mb-1">Floors</label>
+          <select id="in-floors" class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white">
+            <option value="1" selected>1 Floor (Ground Only)</option>
+            <option value="2">2 Floors (Ground + First)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="in-finish" class="block text-xs font-medium text-slate-700 mb-1">Finish Quality (Kerala Rate)</label>
+          <select id="in-finish" class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white">
+            <option value="2000">Basic (₹2,000 / sq ft)</option>
+            <option value="2500" selected>Standard (₹2,500 / sq ft)</option>
+            <option value="3200">Premium (₹3,200 / sq ft)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <button id="btn-clear-plot" type="button" class="text-xs text-red-600 hover:text-red-700 font-medium">Clear All Rooms</button>
+          <button id="btn-generate" type="button" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-xl shadow-sm transition">Auto-Fit Rooms</button>
+        </div>
+      </div>
+
+      <!-- Room Inspector / Customizer -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3" id="inspector-panel">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-900">2. Customize Room</h2>
+          <button id="btn-add-room" type="button" class="text-xs font-medium text-blue-600 hover:text-blue-700">+ Add Room</button>
+        </div>
+
+        <div id="inspector-empty" class="text-xs text-slate-500 py-3">
+          Click any room in the 2D plan to drag, resize, rotate, or move it between Ground and First Floor.
+        </div>
+
+        <div id="inspector-form" class="hidden space-y-2.5 text-xs">
+          <div>
+            <label for="ed-name" class="block font-medium text-slate-700 mb-1">Room Name</label>
+            <input id="ed-name" type="text" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="ed-w" class="block font-medium text-slate-700 mb-1">Width (ft)</label>
+              <input id="ed-w" type="number" min="4" max="35" step="1" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5">
+            </div>
+            <div>
+              <label for="ed-h" class="block font-medium text-slate-700 mb-1">Depth (ft)</label>
+              <input id="ed-h" type="number" min="4" max="35" step="1" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="ed-floor" class="block font-medium text-slate-700 mb-1">Floor</label>
+              <select id="ed-floor" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white">
+                <option value="0">Ground Floor</option>
+                <option value="1">First Floor</option>
+              </select>
+            </div>
+            <div>
+              <label for="ed-type" class="block font-medium text-slate-700 mb-1">Room Type</label>
+              <select id="ed-type" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 bg-white">
+                <option value="bedroom">Bedroom</option>
+                <option value="bath">Bathroom</option>
+                <option value="hall">Living Hall</option>
+                <option value="kitchen">Open Kitchen</option>
+                <option value="work">Dining / Work Area</option>
+                <option value="sitout">Sit-Out / Terrace</option>
+                <option value="stairs">Staircase</option>
+                <option value="study">Study / Office</option>
+                <option value="pooja">Pooja / Prayer Room</option>
+                <option value="store">Store / Utility</option>
+                <option value="porch">Car Porch / Garage</option>
+                <option value="custom">Custom Room</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2 pt-1">
+            <button id="btn-rotate" type="button" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-1.5 rounded-lg">Rotate 90°</button>
+            <button id="btn-delete" type="button" class="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-medium py-1.5 rounded-lg">Delete</button>
+          </div>
+        </div>
+      </div>
+
+
+    </aside>
+
+    <!-- Main Canvas Area -->
+    <main class="lg:col-span-9 flex flex-col gap-3">
+      <!-- Toolbar -->
+      <div class="bg-white rounded-2xl border border-slate-200 px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <button id="tab-2d" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm">2D Plan Editor</button>
+          <button id="tab-3d" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">3D Top-Down View</button>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl" id="floor-switcher">
+          <button id="btn-fl-0" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-blue-700 shadow-sm">Ground Floor</button>
+          <button id="btn-fl-1" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">First Floor</button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span id="view-hint">Drag rooms to move · 1 ft grid snap</span>
+          <button id="btn-top-snap" type="button" class="hidden px-2.5 py-1 bg-blue-50 text-blue-700 font-medium rounded-lg hover:bg-blue-100">Reset Top-Down</button>
+        </div>
+      </div>
+
+      <!-- 2D Interactive Plot & Room Canvas -->
+      <div id="view-2d-wrap" class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex-1 flex flex-col items-center justify-center min-h-[480px]">
+        <div class="mb-2 w-full flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 px-2">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-700/20 border border-emerald-600 inline-block"></span> Open Yard (<span id="yard-pct">100%</span>)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-100 border border-blue-400 inline-block"></span> House Footprint</span>
+            <span class="text-slate-400">Front Entrance ↓</span>
+          </div>
+          <button id="btn-fit-plot" type="button" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold px-3 py-1 rounded-lg shadow-sm">
+            Auto-Generate &amp; Fit
+          </button>
+        </div>
+
+        <div id="plot-canvas" class="relative rounded-xl border-2 border-emerald-500 bg-emerald-50/70 grid-bg overflow-hidden shadow-inner" style="width: 612px; height: 520px;">
+          <!-- Dynamic rooms rendered here -->
+        </div>
+      </div>
+
+      <!-- 3D Top-Down View Container -->
+      <div id="view-3d-wrap" class="hidden bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex-1 relative overflow-hidden min-h-[520px]">
+        <div id="three-mount" class="w-full h-full min-h-[520px]"></div>
+        <div class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur text-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-700 pointer-events-none">
+          Drag to tilt angle · Scroll to zoom · Top-Down 3D Cutaway
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Client Portal Section -->
+  <section id="section-client" class="hidden max-w-6xl w-full mx-auto flex-1 p-4 space-y-4">
+    <!-- Client Auth Card (when logged out) -->
+    <div id="client-auth-card" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4 mt-6">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">Client Portal Sign In</h2>
+        <p class="text-xs text-slate-500 mt-1">Sign in with your Email ID &amp; password to post house inquiries, attach your 2D/3D layout, and chat with the planner.</p>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label for="cl-name" class="block font-medium text-slate-700 mb-1">Your Name</label>
+          <input id="cl-name" type="text" placeholder="e.g. Arjun Nair" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label for="cl-email" class="block font-medium text-slate-700 mb-1">Email ID</label>
+          <input id="cl-email" type="email" placeholder="client@example.com" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label for="cl-pass" class="block font-medium text-slate-700 mb-1">Password</label>
+          <input id="cl-pass" type="password" placeholder="Enter password" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label for="cl-phone" class="block font-medium text-slate-700 mb-1">WhatsApp Number (optional)</label>
+          <input id="cl-phone" type="tel" placeholder="+91 98XXXXXXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="btn-client-login" type="button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 rounded-xl">Sign In / Register</button>
+        <button id="btn-client-demo" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium px-3 py-2.5 rounded-xl">Demo Client</button>
+      </div>
+    </div>
+
+    <!-- Client Dashboard (when logged in) -->
+    <div id="client-dash" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900" id="cl-greeting">Welcome</h2>
+            <p class="text-xs text-slate-500" id="cl-email-lbl"></p>
+          </div>
+          <button id="btn-client-logout" type="button" class="text-xs text-red-600 hover:text-red-700 font-medium">Sign Out</button>
+        </div>
+
+        <h3 class="text-xs font-semibold text-slate-800 uppercase tracking-wide">Post a New House Inquiry</h3>
+        <div class="space-y-2.5 text-xs">
+          <div>
+            <label for="inq-title" class="block font-medium text-slate-700 mb-1">Project Title</label>
+            <input id="inq-title" type="text" placeholder="e.g. 20 Cent 3 BHK Modern Kerala Home" class="w-full border border-slate-300 rounded-lg px-2.5 py-2">
+          </div>
+          <div>
+            <label for="inq-wa-phone" class="block font-medium text-slate-700 mb-1">Your WhatsApp Number (for this conversation)</label>
+            <input id="inq-wa-phone" type="tel" placeholder="+91 98XXXXXXXX" class="w-full border border-slate-300 rounded-lg px-2.5 py-2">
+          </div>
+          <div>
+            <label for="inq-notes" class="block font-medium text-slate-700 mb-1">Specifications &amp; Suggestions</label>
+            <textarea id="inq-notes" rows="3" placeholder="Describe your plot, bedrooms, bathrooms, open kitchen, privacy needs, or budget..." class="w-full border border-slate-300 rounded-lg px-2.5 py-2"></textarea>
+          </div>
+          <div class="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-[11px] text-blue-900">
+            Attaches your current Studio layout: <strong id="inq-attach-summary">6.0 Cents · 3 BHK</strong>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-submit-inq" type="button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl">Submit Inquiry Post</button>
+            <button id="btn-whatsapp-inq" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-2.5 rounded-xl">WhatsApp</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900">Your Inquiry Posts &amp; Chat</h3>
+          <span class="text-xs text-slate-500" id="cl-inq-count">0 posts</span>
+        </div>
+        <div id="cl-inq-list" class="space-y-3 overflow-y-auto max-h-[540px]"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Admin Panel Section -->
+  <section id="section-admin" class="hidden max-w-6xl w-full mx-auto flex-1 p-4 space-y-4">
+    <!-- Admin Gate -->
+    <div id="admin-auth-card" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4 mt-6">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">Admin Entrance Only</h2>
+        <p class="text-xs text-slate-500 mt-1">Enter the owner passcode to manage all client inquiry posts, reply in chat, and load client plans into the 2D/3D Studio. (Default passcode: <code class="bg-slate-100 px-1.5 py-0.5 rounded font-mono">admin123</code>)</p>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label for="adm-pass" class="block font-medium text-slate-700 mb-1">Admin Passcode</label>
+          <input id="adm-pass" type="password" placeholder="Enter admin123" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+        <button id="btn-admin-login" type="button" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl">Unlock Admin Panel</button>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-dash" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Admin Inquiry Desk</h2>
+          <p class="text-xs text-slate-500">Review client requests, reply via chat or WhatsApp, and open any client's layout in the Studio.</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <input id="adm-wa-num" type="tel" placeholder="Your Admin WhatsApp (+91...)" class="border border-slate-300 rounded-lg px-2.5 py-1.5 w-44">
+          <button id="btn-admin-save-wa" type="button" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium px-2.5 py-1.5 rounded-lg">Save WA</button>
+          <button id="btn-admin-logout" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium px-3 py-1.5 rounded-lg">Lock</button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wide">Client Projects &amp; Backup (Admin Only)</h3>
+          <span class="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">100% Local</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div class="flex gap-1.5">
+            <input id="in-client-name" type="text" placeholder="Client name (e.g. 20 Cent Plot)" value="Client Plan" class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5">
+            <button id="btn-save-project" type="button" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg">Save</button>
+          </div>
+          <div class="flex gap-1.5">
+            <select id="sel-projects" class="flex-1 text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white">
+              <option value="">-- Saved Client Plans --</option>
+            </select>
+            <button id="btn-load-project" type="button" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg">Load</button>
+            <button id="btn-del-project" type="button" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium px-2 py-1.5 rounded-lg">Del</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-export-json" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium py-1.5 px-2 rounded-lg text-center">Download Backup</button>
+            <label class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium py-1.5 px-2 rounded-lg text-center cursor-pointer">
+              Restore Backup
+              <input id="in-import-json" type="file" accept=".json,application/json" class="hidden">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wide">Registered Users (Local Database)</h3>
+          <span class="text-xs text-slate-500" id="adm-users-count">0 users</span>
+        </div>
+        <div id="adm-users-list" class="flex flex-wrap gap-2 text-xs"></div>
+      </div>
+
+      <div id="adm-inq-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity z-50"></div>
+
+  <script>
+    const ROOM_STYLES = {
+      bedroom: { bg: 'bg-amber-50/95', border: 'border-amber-400', text: 'text-amber-950', hex: 0xfef3c7, wall: 0xf8fafc },
+      bath:    { bg: 'bg-cyan-50/95', border: 'border-cyan-400', text: 'text-cyan-950', hex: 0xe0f2fe, wall: 0xf8fafc },
+      hall:    { bg: 'bg-blue-50/95', border: 'border-blue-400', text: 'text-blue-950', hex: 0xdbeafe, wall: 0xf8fafc },
+      kitchen: { bg: 'bg-emerald-50/95', border: 'border-emerald-400', text: 'text-emerald-950', hex: 0xd1fae5, wall: 0xf8fafc },
+      work:    { bg: 'bg-teal-50/95', border: 'border-teal-400', text: 'text-teal-950', hex: 0xccfbf1, wall: 0xf8fafc },
+      sitout:  { bg: 'bg-orange-100/95', border: 'border-orange-400', text: 'text-orange-950', hex: 0xfdba74, wall: 0xf1f5f9 },
+      stairs:  { bg: 'bg-stone-200/95', border: 'border-stone-400', text: 'text-stone-900', hex: 0xd6d3d1, wall: 0xf8fafc },
+      study:   { bg: 'bg-indigo-50/95', border: 'border-indigo-400', text: 'text-indigo-950', hex: 0xe0e7ff, wall: 0xf8fafc },
+      pooja:   { bg: 'bg-yellow-50/95', border: 'border-yellow-400', text: 'text-yellow-950', hex: 0xfef9c3, wall: 0xf8fafc },
+      store:   { bg: 'bg-slate-100/95', border: 'border-slate-400', text: 'text-slate-900', hex: 0xe2e8f0, wall: 0xf8fafc },
+      porch:   { bg: 'bg-zinc-200/95', border: 'border-zinc-400', text: 'text-zinc-900', hex: 0xd4d4d8, wall: 0xf1f5f9 },
+      custom:  { bg: 'bg-purple-50/95', border: 'border-purple-400', text: 'text-purple-950', hex: 0xf3e8ff, wall: 0xf8fafc }
+    };
+
+    let state = {
+      cents: 6.0,
+      maxCovPct: 60,
+      bedrooms: 3,
+      floors: 1,
+      finishRate: 2500,
+      activeFloor: 0,
+      viewMode: '2d',
+      selectedId: null,
+      rooms: []
+    };
+
+    const PX_PER_FT = 11;
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      setTimeout(() => t.classList.add('opacity-0'), 2200);
+    }
+
+    function getPlotDims() {
+      const sqFt = state.cents * 435.6;
+      const side = Math.round(Math.sqrt(sqFt));
+      return { sqFt: Math.round(sqFt), w: side, h: side };
+    }
+
+    function packFlushBand(items, x0, y0, totalW, bandH) {
+      if (!items.length) return 0;
+      const sumW = items.reduce((s, r) => s + Math.max(4, r.w), 0);
+      let curX = x0;
+      items.forEach((r, idx) => {
+        const isLast = idx === items.length - 1;
+        const w = isLast ? (x0 + totalW - curX) : Math.max(4, Math.round((r.w / sumW) * totalW));
+        r.x = curX;
+        r.y = y0;
+        r.w = Math.max(4, w);
+        r.h = bandH;
+        curX += r.w;
+      });
+      return bandH;
+    }
+
+    function generateDefaultPlan() {
+      const plot = getPlotDims();
+      const targetArea = Math.round(plot.sqFt * (state.maxCovPct / 100));
+
+      // If plot is empty, populate a clean architectural Kerala starter set
+      if (!state.rooms.length) {
+        state.rooms = [
+          { id: 'r1', name: 'Open Kitchen', type: 'kitchen', floor: 0, x: 0, y: 0, w: 11, h: 10 },
+          { id: 'r2', name: 'Work Area', type: 'work', floor: 0, x: 0, y: 0, w: 9, h: 10 },
+          { id: 'r3', name: 'Common Bath', type: 'bath', floor: 0, x: 0, y: 0, w: 6, h: 10 },
+          { id: 'r4', name: 'Living Hall (TV)', type: 'hall', floor: 0, x: 0, y: 0, w: 18, h: 13 },
+          { id: 'r5', name: 'Front Sit-Out', type: 'sitout', floor: 0, x: 0, y: 0, w: 14, h: 7 },
+          { id: 'r6', name: 'Master Bedroom', type: 'bedroom', floor: 0, x: 0, y: 0, w: 13, h: 13 },
+          { id: 'r7', name: 'Master Bath', type: 'bath', floor: 0, x: 0, y: 0, w: 6, h: 8 },
+          { id: 'r8', name: 'Bedroom 2', type: 'bedroom', floor: state.floors === 2 ? 1 : 0, x: 0, y: 0, w: 12, h: 12 },
+          { id: 'r9', name: 'Bath 2', type: 'bath', floor: state.floors === 2 ? 1 : 0, x: 0, y: 0, w: 5, h: 8 }
+        ];
+        if (state.floors === 2) {
+          state.rooms.push({ id: 'r10', name: 'Staircase', type: 'stairs', floor: 0, x: 0, y: 0, w: 8, h: 13 });
+          state.rooms.push({ id: 'r11', name: 'Open Terrace', type: 'sitout', floor: 1, x: 0, y: 0, w: 16, h: 7 });
+        }
+      }
+
+      // Compute clean rectangular house envelope within target coverage
+      const houseW = Math.max(18, Math.min(plot.w, Math.round(Math.sqrt(targetArea * 1.05))));
+      const houseH = Math.max(18, Math.min(plot.h, Math.round(targetArea / houseW)));
+      const sx = Math.max(0, Math.round((plot.w - houseW) / 2));
+      const sy = Math.max(0, Math.round((plot.h - houseH) / 2));
+
+      // Semantic Ground Floor Zoning: Back (Kitchen/Work/Bath) -> Center (Hall/Stairs/Extra Beds) -> Front (Sit-Out/Master)
+      const gRooms = state.rooms.filter(r => r.floor === 0);
+      if (gRooms.length) {
+        const backBand = [];
+        const midBand = [];
+        const frontBand = [];
+
+        gRooms.forEach(r => {
+          const nm = r.name.toLowerCase();
+          if (r.type === 'sitout' || r.type === 'porch' || nm.includes('master')) {
+            frontBand.push(r);
+          } else if (r.type === 'kitchen' || r.type === 'work' || r.type === 'store' || nm.includes('common')) {
+            backBand.push(r);
+          } else {
+            midBand.push(r);
+          }
+        });
+
+        // Order Front Band so Sit-Out/Porch is on the left, Master Bedroom + Master Bath on the right
+        frontBand.sort((a, b) => {
+          const rank = x => (x.type === 'sitout' || x.type === 'porch') ? 0 : (x.type === 'bedroom' ? 1 : 2);
+          return rank(a) - rank(b);
+        });
+
+        // Order Mid Band so Living Hall is centered/left and Stairs/other rooms sit cleanly beside it
+        midBand.sort((a, b) => {
+          const rank = x => x.type === 'hall' ? 0 : (x.type === 'stairs' ? 1 : 2);
+          return rank(a) - rank(b);
+        });
+
+        const bands = [backBand, midBand, frontBand].filter(b => b.length > 0);
+        const totalBandWeight = bands.reduce((s, b) => s + (b === midBand ? 1.35 : (b === frontBand ? 1.0 : 0.9)), 0);
+        let curY = sy;
+        bands.forEach((b, idx) => {
+          const isLast = idx === bands.length - 1;
+          const weight = b === midBand ? 1.35 : (b === frontBand ? 1.0 : 0.9);
+          const bh = isLast ? (sy + houseH - curY) : Math.max(6, Math.round((weight / totalBandWeight) * houseH));
+          packFlushBand(b, sx, curY, houseW, bh);
+          curY += bh;
+        });
+      }
+
+      // First Floor Semantic Zoning (if any rooms on floor 1)
+      const fRooms = state.rooms.filter(r => r.floor === 1);
+      if (fRooms.length) {
+        const fBack = fRooms.filter(r => r.type === 'bath' || r.type === 'stairs' || r.type === 'store');
+        const fMid = fRooms.filter(r => r.type !== 'bath' && r.type !== 'stairs' && r.type !== 'store' && r.type !== 'sitout');
+        const fFront = fRooms.filter(r => r.type === 'sitout');
+        const fBands = [fBack, fMid, fFront].filter(b => b.length > 0);
+        let curY = sy;
+        fBands.forEach((b, idx) => {
+          const isLast = idx === fBands.length - 1;
+          const bh = isLast ? (sy + houseH - curY) : Math.max(6, Math.round(houseH / fBands.length));
+          packFlushBand(b, sx, curY, houseW, bh);
+          curY += bh;
+        });
+      }
+
+      if (state.floors === 1) state.activeFloor = 0;
+      saveAutoState();
+      renderAll();
+    }
+
+    function updateMetrics() {
+      const plot = getPlotDims();
+      const groundRooms = state.rooms.filter(r => r.floor === 0);
+      const firstRooms = state.rooms.filter(r => r.floor === 1);
+      const groundSqFt = groundRooms.reduce((s, r) => s + r.w * r.h, 0);
+      const firstSqFt = firstRooms.reduce((s, r) => s + r.w * r.h, 0);
+      const totalSqFt = groundSqFt + firstSqFt;
+      const covPct = Math.round((groundSqFt / plot.sqFt) * 100);
+
+      const cost2026 = totalSqFt * state.finishRate;
+      const cost2036 = cost2026 * Math.pow(1.065, 10);
+
+      document.getElementById('lbl-cents').textContent = `cents`;
+      document.getElementById('lbl-plot-dims').textContent = `~${plot.w} × ${plot.h} ft`;
+      document.getElementById('lbl-cov').textContent = `${state.maxCovPct}% (${100 - state.maxCovPct}% Yard)`;
+      document.getElementById('yard-pct').textContent = `${Math.max(0, 100 - covPct)}%`;
+
+      document.getElementById('metric-plot').textContent = `${state.cents.toFixed(1)} Cents (${plot.sqFt.toLocaleString('en-IN')} sq ft)`;
+      document.getElementById('metric-cov').textContent = `${groundSqFt.toLocaleString('en-IN')} sq ft (${covPct}%)`;
+      document.getElementById('metric-total').textContent = `${totalSqFt.toLocaleString('en-IN')} sq ft`;
+      document.getElementById('metric-cost').textContent = `₹${(cost2026 / 100000).toFixed(1)}L / ₹${(cost2036 / 100000).toFixed(1)}L`;
+
+      const covBox = document.getElementById('metric-cov-box');
+      if (covPct > state.maxCovPct) {
+        covBox.className = 'bg-red-50 border border-red-200 rounded-lg px-3 py-1.5';
+      } else {
+        covBox.className = 'bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5';
+      }
+
+      // Floor switcher visibility
+      const fl1Btn = document.getElementById('btn-fl-1');
+      if (state.floors === 1) {
+        fl1Btn.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        fl1Btn.classList.remove('opacity-40', 'pointer-events-none');
+      }
+    }
+
+    function render2D() {
+      const plot = getPlotDims();
+      const canvas = document.getElementById('plot-canvas');
+      const wrapEl = document.getElementById('view-2d-wrap');
+      const availW = Math.max(320, (wrapEl ? wrapEl.clientWidth - 48 : 560));
+      const availH = 420;
+      const scale = Math.min(availW / plot.w, availH / plot.h);
+
+      canvas.style.width = `${Math.round(plot.w * scale)}px`;
+      canvas.style.height = `${Math.round(plot.h * scale)}px`;
+      canvas.style.backgroundSize = `${scale * 2}px ${scale * 2}px`;
+      canvas.replaceChildren();
+
+      const floorRooms = state.rooms.filter(r => r.floor === state.activeFloor);
+      floorRooms.forEach(r => {
+        const st = ROOM_STYLES[r.type] || ROOM_STYLES.bedroom;
+        const div = document.createElement('div');
+        div.className = `room-box absolute rounded-lg border-2 ${st.bg} ${st.border} ${st.text} flex flex-col items-center justify-center p-1 cursor-grab active:cursor-grabbing text-center overflow-hidden ${state.selectedId === r.id ? 'selected' : ''}`;
+        div.style.left = `${r.x * scale}px`;
+        div.style.top = `${r.y * scale}px`;
+        div.style.width = `${r.w * scale}px`;
+        div.style.height = `${r.h * scale}px`;
+        div.dataset.id = r.id;
+
+        const title = document.createElement('div');
+        title.className = 'text-[11px] font-semibold leading-tight truncate max-w-full px-1';
+        title.textContent = r.name;
+
+        const dims = document.createElement('div');
+        dims.className = 'text-[10px] opacity-75 font-mono leading-tight';
+        dims.textContent = `${r.w}×${r.h} ft (${r.w * r.h})`;
+
+        const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        iconSvg.setAttribute('viewBox', '0 0 40 24');
+        iconSvg.setAttribute('class', 'w-8 h-4 opacity-50 mb-0.5 pointer-events-none');
+        if (r.type === 'bedroom') {
+          iconSvg.innerHTML = '<rect x="6" y="2" width="28" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="4" width="9" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="9" height="5" rx="1" fill="currentColor"/>';
+        } else if (r.type === 'bath') {
+          iconSvg.innerHTML = '<rect x="4" y="4" width="20" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="32" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>';
+        } else if (r.type === 'hall') {
+          iconSvg.innerHTML = '<rect x="4" y="10" width="32" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><line x1="10" y1="4" x2="30" y2="4" stroke="currentColor" stroke-width="2.2"/>';
+        } else if (r.type === 'kitchen') {
+          iconSvg.innerHTML = '<path d="M4 20 L4 4 L36 4" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="14" cy="10" r="2.5" fill="currentColor"/><circle cx="24" cy="10" r="2.5" fill="currentColor"/>';
+        } else if (r.type === 'stairs') {
+          iconSvg.innerHTML = '<path d="M4 20 H12 V15 H20 V10 H28 V5 H36" fill="none" stroke="currentColor" stroke-width="2"/>';
+        }
+        if (iconSvg.innerHTML) div.appendChild(iconSvg);
+        div.appendChild(title);
+        div.appendChild(dims);
+
+        // Smooth Dragging logic (no DOM rebuild on pointerdown)
+        div.addEventListener('pointerdown', e => {
+          e.stopPropagation();
+          e.preventDefault();
+          selectRoom(r.id, false);
+          canvas.querySelectorAll('.room-box').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+
+          const startClientX = e.clientX;
+          const startClientY = e.clientY;
+          const origPxX = r.x * scale;
+          const origPxY = r.y * scale;
+          const maxPxX = (plot.w - r.w) * scale;
+          const maxPxY = (plot.h - r.h) * scale;
+
+          const onMove = ev => {
+            const nx = Math.max(0, Math.min(maxPxX, origPxX + (ev.clientX - startClientX)));
+            const ny = Math.max(0, Math.min(maxPxY, origPxY + (ev.clientY - startClientY)));
+            div.style.left = `${nx}px`;
+            div.style.top = `${ny}px`;
+            r.x = Math.round(nx / scale);
+            r.y = Math.round(ny / scale);
+          };
+          const onUp = () => {
+            div.style.left = `${r.x * scale}px`;
+            div.style.top = `${r.y * scale}px`;
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            updateMetrics();
+            saveAutoState();
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+
+        canvas.appendChild(div);
+      });
+    }
+
+    function selectRoom(id, shouldRender = true) {
+      state.selectedId = id;
+      const room = state.rooms.find(r => r.id === id);
+      const emptyEl = document.getElementById('inspector-empty');
+      const formEl = document.getElementById('inspector-form');
+      if (!room) {
+        emptyEl.classList.remove('hidden');
+        formEl.classList.add('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+        formEl.classList.remove('hidden');
+        document.getElementById('ed-name').value = room.name;
+        document.getElementById('ed-w').value = room.w;
+        document.getElementById('ed-h').value = room.h;
+        document.getElementById('ed-floor').value = String(room.floor);
+        document.getElementById('ed-type').value = room.type;
+      }
+      if (shouldRender) renderAll();
+    }
+
+    // --- Three.js 3D Top-Down View ---
+    let threeState = { init: false, scene: null, camera: null, renderer: null, group: null, theta: 0, phi: 0.22, dist: 72 };
+
+    function initThree() {
+      if (threeState.init || !window.THREE) return;
+      const mount = document.getElementById('three-mount');
+      const w = mount.clientWidth || 700;
+      const h = mount.clientHeight || 520;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x18181b);
+
+      const camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 400);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      mount.replaceChildren(renderer.domElement);
+
+      const amb = new THREE.AmbientLight(0xffffff, 0.72);
+      scene.add(amb);
+      const dir = new THREE.DirectionalLight(0xfffbeb, 0.75);
+      dir.position.set(30, 65, 35);
+      scene.add(dir);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      threeState = { init: true, scene, camera, renderer, group, theta: 0, phi: 0.20, dist: 72 };
+
+      // Simple orbit drag + wheel zoom
+      let dragging = false, lx = 0, ly = 0;
+      renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; });
+      window.addEventListener('pointerup', () => { dragging = false; });
+      window.addEventListener('pointermove', e => {
+        if (!dragging || state.viewMode !== '3d') return;
+        threeState.theta -= (e.clientX - lx) * 0.008;
+        threeState.phi = Math.max(0.05, Math.min(1.15, threeState.phi + (e.clientY - ly) * 0.008));
+        lx = e.clientX; ly = e.clientY;
+        positionCamera();
+      });
+      renderer.domElement.addEventListener('wheel', e => {
+        e.preventDefault();
+        threeState.dist = Math.max(35, Math.min(130, threeState.dist + e.deltaY * 0.05));
+        positionCamera();
+      }, { passive: false });
+
+      window.addEventListener('resize', () => {
+        if (!threeState.init) return;
+        const nw = mount.clientWidth || 700;
+        const nh = mount.clientHeight || 520;
+        camera.aspect = nw / nh;
+        camera.updateProjectionMatrix();
+        renderer.setSize(nw, nh);
+        renderer.render(scene, camera);
+      });
+    }
+
+    function positionCamera() {
+      if (!threeState.init) return;
+      const { camera, renderer, scene, theta, phi, dist } = threeState;
+      camera.position.set(
+        dist * Math.sin(phi) * Math.sin(theta),
+        dist * Math.cos(phi),
+        dist * Math.sin(phi) * Math.cos(theta)
+      );
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    }
+
+    function render3D() {
+      initThree();
+      if (!threeState.init) return;
+      const plot = getPlotDims();
+      const { group, renderer, scene } = threeState;
+      while (group.children.length) group.remove(group.children[0]);
+
+      // Darker, authentic Kerala Lawn Green floating plot slab
+      const plotGeo = new THREE.BoxGeometry(plot.w, 0.6, plot.h);
+      const plotMat = new THREE.MeshLambertMaterial({ color: 0x166534 });
+      const plotMesh = new THREE.Mesh(plotGeo, plotMat);
+      plotMesh.position.set(0, -0.35, 0);
+      group.add(plotMesh);
+
+      const floorRooms = state.rooms.filter(r => r.floor === state.activeFloor);
+      const wallH = 3.4;
+
+      const addBox = (bx, by, bz, bw, bh, bd, col) => {
+        const geo = new THREE.BoxGeometry(bw, bh, bd);
+        const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: col }));
+        m.position.set(bx, by, bz);
+        group.add(m);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.35 }));
+        edges.position.copy(m.position);
+        group.add(edges);
+      };
+
+      floorRooms.forEach(r => {
+        const st = ROOM_STYLES[r.type] || ROOM_STYLES.bedroom;
+        const cx = r.x + r.w / 2 - plot.w / 2;
+        const cz = r.y + r.h / 2 - plot.h / 2;
+
+        // Floor slab
+        addBox(cx, 0.12, cz, r.w, 0.25, r.h, st.hex);
+
+        // Cutaway perimeter walls
+        const hWall = r.type === 'sitout' ? 0.9 : wallH;
+        const t = 0.35;
+        addBox(cx, hWall / 2 + 0.2, cz - r.h / 2 + t / 2, r.w, hWall, t, 0xf8fafc);
+        addBox(cx, hWall / 2 + 0.2, cz + r.h / 2 - t / 2, r.w, hWall, t, 0xf8fafc);
+        addBox(cx - r.w / 2 + t / 2, hWall / 2 + 0.2, cz, t, hWall, r.h, 0xf8fafc);
+        addBox(cx + r.w / 2 - t / 2, hWall / 2 + 0.2, cz, t, hWall, r.h, 0xf8fafc);
+
+        // Rich 3D Furnishing per Room Type
+        if (r.type === 'bedroom') {
+          const bw = Math.min(5.8, r.w - 2.4);
+          const bd = Math.min(6.4, r.h - 2.4);
+          addBox(cx - 0.5, 0.6, cz, bw, 0.7, bd, 0x78350f); // bed frame
+          addBox(cx - 0.5, 1.05, cz + 0.2, bw - 0.4, 0.35, bd - 0.5, 0xf8fafc); // mattress
+          addBox(cx - 1.3, 1.3, cz - bd / 2 + 0.8, 1.4, 0.25, 0.9, 0xe2e8f0); // pillow 1
+          addBox(cx + 0.3, 1.3, cz - bd / 2 + 0.8, 1.4, 0.25, 0.9, 0xe2e8f0); // pillow 2
+          if (r.w >= 9) {
+            addBox(cx + r.w / 2 - 1.3, 1.5, cz, 1.6, 2.6, Math.min(5, r.h - 3), 0x92400e); // wardrobe
+          }
+        } else if (r.type === 'bath') {
+          addBox(cx - r.w / 4, 0.7, cz, Math.min(2.4, r.w * 0.45), 0.9, Math.min(4.6, r.h - 1.4), 0xffffff); // bathtub
+          addBox(cx + r.w / 4, 0.8, cz - r.h / 4, 1.4, 1.1, 1.4, 0xe2e8f0); // vanity sink
+          addBox(cx + r.w / 4, 0.65, cz + r.h / 4, 1.2, 0.8, 1.5, 0xf8fafc); // WC
+        } else if (r.type === 'hall') {
+          addBox(cx - r.w / 4, 0.5, cz, Math.max(4, r.w * 0.55), 0.1, Math.max(4, r.h * 0.5), 0x94a3b8); // rug
+          addBox(cx - r.w / 4, 0.9, cz + r.h / 4 - 0.5, Math.min(7.5, r.w - 4), 1.3, 2.4, 0x475569); // sofa
+          addBox(cx - r.w / 4, 0.7, cz, 3.2, 0.6, 2.0, 0x78350f); // coffee table
+          addBox(cx + r.w / 2 - 1.2, 1.2, cz, 1.0, 1.8, Math.min(6, r.h - 4), 0x1e293b); // TV console
+        } else if (r.type === 'kitchen') {
+          addBox(cx, 1.2, cz - r.h / 2 + 1.4, r.w - 1.4, 1.9, 2.0, 0x1e293b); // granite counter
+          addBox(cx - r.w / 2 + 1.4, 1.2, cz + 0.5, 2.0, 1.9, r.h - 2.6, 0x334155); // L-return
+        } else if (r.type === 'work') {
+          addBox(cx, 1.0, cz, Math.min(4.5, r.w - 2.5), 1.4, Math.min(3.2, r.h - 3), 0x92400e); // dining table
+        } else if (r.type === 'sitout') {
+          addBox(cx - r.w / 4, 0.8, cz, 2.2, 1.1, 2.2, 0x78350f); // chair 1
+          addBox(cx + r.w / 4, 0.8, cz, 2.2, 1.1, 2.2, 0x78350f); // chair 2
+        } else if (r.type === 'stairs') {
+          for (let s = 0; s < 5; s++) {
+            addBox(cx - r.w / 3 + s * (r.w * 0.16), 0.4 + s * 0.45, cz, r.w * 0.14, 0.4 + s * 0.9, r.h - 1.4, 0xa8a29e);
+          }
+        }
+      });
+
+      const mount = document.getElementById('three-mount');
+      const nw = mount.clientWidth || 700;
+      const nh = mount.clientHeight || 520;
+      threeState.camera.aspect = nw / nh;
+      threeState.camera.updateProjectionMatrix();
+      threeState.dist = Math.max(65, Math.round(Math.max(plot.w, plot.h) * 1.45));
+      renderer.setSize(nw, nh);
+      positionCamera();
+      renderer.render(scene, threeState.camera);
+    }
+
+    function renderAll() {
+      updateMetrics();
+      if (state.viewMode === '2d') {
+        render2D();
+      } else {
+        render3D();
+      }
+    }
+
+    // Event Bindings
+    document.getElementById('in-cents').addEventListener('input', e => {
+      state.cents = parseFloat(e.target.value);
+      document.getElementById('in-cents-num').value = state.cents;
+      renderAll();
+    });
+    document.getElementById('in-cents').addEventListener('change', () => saveAutoState());
+    document.getElementById('in-cents-num').addEventListener('input', e => {
+      const v = Math.max(2, Math.min(50, parseFloat(e.target.value || '6')));
+      state.cents = v;
+      document.getElementById('in-cents').value = v;
+      saveAutoState();
+      renderAll();
+    });
+    document.getElementById('in-cov').addEventListener('input', e => {
+      state.maxCovPct = parseInt(e.target.value, 10);
+      renderAll();
+    });
+    document.getElementById('btn-fit-plot').addEventListener('click', () => {
+      generateDefaultPlan();
+      showToast('Auto-generated layout fitted to plot');
+    });
+
+
+    document.getElementById('in-floors').addEventListener('change', e => {
+      state.floors = parseInt(e.target.value, 10);
+          });
+    document.getElementById('in-finish').addEventListener('change', e => {
+      state.finishRate = parseInt(e.target.value, 10);
+      updateMetrics();
+    });
+    document.getElementById('btn-generate').addEventListener('click', () => {
+      generateDefaultPlan();
+      showToast('Generated fresh layout for your plot specs');
+    });
+
+    // Inspector edits
+    ['ed-name', 'ed-w', 'ed-h', 'ed-floor', 'ed-type'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        const room = state.rooms.find(r => r.id === state.selectedId);
+        if (!room) return;
+        room.name = document.getElementById('ed-name').value || 'Room';
+        const plot = getPlotDims();
+        room.w = Math.max(4, Math.min(plot.w, parseInt(document.getElementById('ed-w').value || '8', 10)));
+        room.h = Math.max(4, Math.min(plot.h, parseInt(document.getElementById('ed-h').value || '8', 10)));
+        room.floor = parseInt(document.getElementById('ed-floor').value, 10);
+        room.type = document.getElementById('ed-type').value;
+        renderAll();
+      });
+    });
+
+    document.getElementById('btn-rotate').addEventListener('click', () => {
+      const room = state.rooms.find(r => r.id === state.selectedId);
+      if (!room) return;
+      const tmp = room.w; room.w = room.h; room.h = tmp;
+      document.getElementById('ed-w').value = room.w;
+      document.getElementById('ed-h').value = room.h;
+      renderAll();
+    });
+
+    document.getElementById('btn-delete').addEventListener('click', () => {
+      if (!state.selectedId) return;
+      state.rooms = state.rooms.filter(r => r.id !== state.selectedId);
+      selectRoom(null);
+      updateMetrics();
+      showToast('Room removed');
+    });
+
+    document.getElementById('btn-add-room').addEventListener('click', () => {
+      const plot = getPlotDims();
+      const count = state.rooms.filter(r => r.floor === state.activeFloor).length;
+      const nr = {
+        id: 'r' + Date.now(),
+        name: `Room ${state.rooms.length + 1}`,
+        type: 'custom',
+        floor: state.activeFloor,
+        x: Math.min(plot.w - 10, 2 + (count % 3) * 11),
+        y: Math.min(plot.h - 10, 2 + Math.floor(count / 3) * 11),
+        w: 10,
+        h: 10
+      };
+      state.rooms.push(nr);
+      saveAutoState();
+      selectRoom(nr.id, true);
+      showToast('Room added — edit name/type or drag to position');
+    });
+
+    // Floor & View Switchers
+    document.getElementById('btn-fl-0').addEventListener('click', () => {
+      state.activeFloor = 0;
+      document.getElementById('btn-fl-0').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-blue-700 shadow-sm';
+      document.getElementById('btn-fl-1').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      selectRoom(null);
+      renderAll();
+    });
+    document.getElementById('btn-fl-1').addEventListener('click', () => {
+      if (state.floors === 1) return;
+      state.activeFloor = 1;
+      document.getElementById('btn-fl-1').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-blue-700 shadow-sm';
+      document.getElementById('btn-fl-0').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      selectRoom(null);
+      renderAll();
+    });
+
+    document.getElementById('tab-2d').addEventListener('click', () => {
+      state.viewMode = '2d';
+      document.getElementById('tab-2d').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm';
+      document.getElementById('tab-3d').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      document.getElementById('view-2d-wrap').classList.remove('hidden');
+      document.getElementById('view-3d-wrap').classList.add('hidden');
+      document.getElementById('btn-top-snap').classList.add('hidden');
+      document.getElementById('view-hint').textContent = 'Drag rooms to move · 1 ft grid snap';
+      renderAll();
+    });
+
+    document.getElementById('tab-3d').addEventListener('click', () => {
+      state.viewMode = '3d';
+      document.getElementById('tab-3d').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm';
+      document.getElementById('tab-2d').className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      document.getElementById('view-3d-wrap').classList.remove('hidden');
+      document.getElementById('view-2d-wrap').classList.add('hidden');
+      document.getElementById('btn-top-snap').classList.remove('hidden');
+      document.getElementById('view-hint').textContent = '3D Cutaway View';
+      renderAll();
+    });
+
+    document.getElementById('btn-top-snap').addEventListener('click', () => {
+      const plot = getPlotDims();
+      threeState.theta = 0;
+      threeState.phi = 0.08;
+      threeState.dist = Math.max(65, Math.round(Math.max(plot.w, plot.h) * 1.45));
+      positionCamera();
+    });
+
+    document.getElementById('plot-canvas').addEventListener('pointerdown', e => {
+      if (e.target.id === 'plot-canvas') selectRoom(null);
+    });
+
+    // --- Local Storage & JSON Backup ---
+    const STORE_KEY = 'kerala_house_studio_projects_v1';
+    const AUTO_KEY = 'kerala_house_studio_autosave_v1';
+
+    function getSavedProjects() {
+      try {
+        return JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+      } catch (e) { return {}; }
+    }
+    function setSavedProjects(obj) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); } catch (e) {}
+    }
+    function saveAutoState() {
+      try { localStorage.setItem(AUTO_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+    function refreshProjectList() {
+      const sel = document.getElementById('sel-projects');
+      const projects = getSavedProjects();
+      const names = Object.keys(projects);
+      sel.innerHTML = '<option value="">-- Saved Client Plans (' + names.length + ') --</option>';
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = `${n} (${projects[n].cents}c · ${projects[n].bedrooms}BHK)`;
+        sel.appendChild(opt);
+      });
+    }
+
+    document.getElementById('btn-save-project').addEventListener('click', () => {
+      const name = (document.getElementById('in-client-name').value || '').trim();
+      if (!name) { showToast('Enter a client or project name first'); return; }
+      const projects = getSavedProjects();
+      projects[name] = JSON.parse(JSON.stringify(state));
+      setSavedProjects(projects);
+      refreshProjectList();
+      document.getElementById('sel-projects').value = name;
+      showToast(`Saved "${name}" locally`);
+    });
+
+    document.getElementById('btn-load-project').addEventListener('click', () => {
+      const name = document.getElementById('sel-projects').value;
+      const projects = getSavedProjects();
+      if (!name || !projects[name]) { showToast('Select a saved project to load'); return; }
+      state = JSON.parse(JSON.stringify(projects[name]));
+      document.getElementById('in-client-name').value = name;
+      document.getElementById('in-cents').value = state.cents;
+      document.getElementById('in-cents-num').value = state.cents;
+      document.getElementById('in-cov').value = state.maxCovPct;
+      // bedrooms tracked in state
+      document.getElementById('in-floors').value = state.floors;
+      document.getElementById('in-finish').value = state.finishRate;
+      selectRoom(null);
+      renderAll();
+      showToast(`Loaded "${name}"`);
+    });
+
+    document.getElementById('btn-del-project').addEventListener('click', () => {
+      const name = document.getElementById('sel-projects').value;
+      const projects = getSavedProjects();
+      if (!name || !projects[name]) return;
+      delete projects[name];
+      setSavedProjects(projects);
+      refreshProjectList();
+      showToast(`Deleted "${name}"`);
+    });
+
+    document.getElementById('btn-export-json').addEventListener('click', () => {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        currentPlan: state,
+        savedProjects: getSavedProjects()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kerala-house-plans-backup.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Backup file downloaded');
+    });
+
+    document.getElementById('in-import-json').addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.savedProjects) {
+            const merged = Object.assign({}, getSavedProjects(), data.savedProjects);
+            setSavedProjects(merged);
+            refreshProjectList();
+          }
+          if (data.currentPlan && Array.isArray(data.currentPlan.rooms)) {
+            state = data.currentPlan;
+            document.getElementById('in-cents').value = state.cents;
+            document.getElementById('in-cents-num').value = state.cents;
+            document.getElementById('in-cov').value = state.maxCovPct;
+            // bedrooms tracked in state
+            document.getElementById('in-floors').value = state.floors;
+            document.getElementById('in-finish').value = state.finishRate;
+            renderAll();
+          }
+          showToast('Backup restored successfully');
+        } catch (err) {
+          showToast('Invalid backup JSON file');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('btn-clear-plot').addEventListener('click', () => {
+      state.rooms = [];
+      selectRoom(null);
+      saveAutoState();
+      renderAll();
+      showToast('Plot cleared — enter room sizes and click Auto-Generate');
+    });
+
+        refreshProjectList();
+    try {
+      const cached = JSON.parse(localStorage.getItem(AUTO_KEY) || 'null');
+      if (cached && Array.isArray(cached.rooms)) {
+        state = cached;
+        document.getElementById('in-cents').value = state.cents;
+        document.getElementById('in-cents-num').value = state.cents;
+        document.getElementById('in-cov').value = state.maxCovPct;
+        // bedrooms tracked in state
+        document.getElementById('in-floors').value = state.floors;
+        document.getElementById('in-finish').value = state.finishRate;
+      }
+    } catch (e) {}
+    renderAll();
+
+    // --- Portal Navigation, Client Inquiries & Admin Panel ---
+    const PORTAL_KEY = 'kerala_house_portal_inquiries_v1';
+    const CLIENT_SESSION_KEY = 'kerala_house_client_session_v1';
+    const ADMIN_WA_KEY = 'kerala_house_admin_wa_v1';
+
+    let portalState = {
+      section: 'studio',
+      clientUser: null,
+      adminUnlocked: false,
+      adminWhatsapp: '919876543210'
+    };
+
+    try {
+      const savedUser = JSON.parse(localStorage.getItem(CLIENT_SESSION_KEY) || 'null');
+      if (savedUser && savedUser.email) portalState.clientUser = savedUser;
+      const savedWa = localStorage.getItem(ADMIN_WA_KEY);
+      if (savedWa) portalState.adminWhatsapp = savedWa;
+    } catch (e) {}
+
+    function getInquiries() {
+      try {
+        const list = JSON.parse(localStorage.getItem(PORTAL_KEY) || 'null');
+        if (Array.isArray(list)) return list;
+      } catch (e) {}
+      return [];
+    }
+
+    function setInquiries(list) {
+      try { localStorage.setItem(PORTAL_KEY, JSON.stringify(list)); } catch (e) {}
+    }
+
+    function switchSection(sec) {
+      portalState.section = sec;
+      ['studio', 'client', 'admin'].forEach(k => {
+        document.getElementById('section-' + k).classList.toggle('hidden', k !== sec);
+        const btn = document.getElementById('nav-' + k);
+        btn.className = k === sec
+          ? 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-sm'
+          : 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      });
+      if (sec === 'client') renderClientPortal();
+      if (sec === 'admin') renderAdminPanel();
+      if (sec === 'studio') renderAll();
+    }
+
+    document.getElementById('nav-studio').addEventListener('click', () => switchSection('studio'));
+    document.getElementById('nav-client').addEventListener('click', () => switchSection('client'));
+    document.getElementById('nav-admin').addEventListener('click', () => switchSection('admin'));
+
+    function renderClientPortal() {
+      const loggedIn = !!(portalState.clientUser && portalState.clientUser.email);
+      document.getElementById('client-auth-card').classList.toggle('hidden', loggedIn);
+      document.getElementById('client-dash').classList.toggle('hidden', !loggedIn);
+      if (!loggedIn) return;
+
+      document.getElementById('cl-greeting').textContent = `Welcome, ${portalState.clientUser.name}`;
+      document.getElementById('cl-email-lbl').textContent = portalState.clientUser.email;
+      document.getElementById('inq-attach-summary').textContent = `${state.cents.toFixed(1)} Cents · ${state.bedrooms} BHK · ${state.floors} Floor(s)`;
+
+      const all = getInquiries().filter(q => q.clientEmail === portalState.clientUser.email);
+      document.getElementById('cl-inq-count').textContent = `${all.length} post(s)`;
+      const listEl = document.getElementById('cl-inq-list');
+      listEl.replaceChildren();
+
+      if (!all.length) {
+        const empty = document.createElement('div');
+        empty.className = 'text-xs text-slate-500 py-6 text-center';
+        empty.textContent = 'No inquiry posts yet. Submit your house requirement on the left.';
+        listEl.appendChild(empty);
+        return;
+      }
+
+      all.forEach(inq => {
+        const card = document.createElement('div');
+        card.className = 'border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="text-xs font-bold text-slate-900"></div>
+              <div class="text-[11px] text-slate-500">${inq.planSnapshot.cents} Cents · ${inq.planSnapshot.bedrooms} BHK · ${inq.createdAt}</div>
+            </div>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">${inq.status}</span>
+          </div>
+          <p class="text-xs text-slate-700"></p>
+          <div class="space-y-1.5 pt-2 border-t border-slate-200" data-chat-box></div>
+          <div class="flex gap-1.5 pt-1">
+            <input type="text" placeholder="Reply in inquiry chat..." class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white" data-chat-input>
+            <button type="button" class="bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg" data-chat-send>Send</button>
+          </div>
+        `;
+        card.querySelector('.font-bold').textContent = inq.title;
+        card.querySelector('p').textContent = inq.notes;
+
+        const chatBox = card.querySelector('[data-chat-box]');
+        (inq.messages || []).forEach(m => {
+          const msg = document.createElement('div');
+          msg.className = m.sender === 'admin'
+            ? 'text-xs bg-blue-50 border border-blue-100 text-blue-950 rounded-lg px-2.5 py-1.5'
+            : 'text-xs bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5';
+          msg.textContent = `${m.sender === 'admin' ? 'Admin' : 'You'} (${m.time}): ${m.text}`;
+          chatBox.appendChild(msg);
+        });
+
+        card.querySelector('[data-chat-send]').addEventListener('click', () => {
+          const inp = card.querySelector('[data-chat-input]');
+          const txt = (inp.value || '').trim();
+          if (!txt) return;
+          const items = getInquiries();
+          const target = items.find(x => x.id === inq.id);
+          if (target) {
+            target.messages.push({ sender: 'client', text: txt, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            setInquiries(items);
+            renderClientPortal();
+          }
+        });
+        listEl.appendChild(card);
+      });
+    }
+
+    document.getElementById('btn-client-login').addEventListener('click', () => {
+      const name = (document.getElementById('cl-name').value || '').trim() || 'Client';
+      const email = (document.getElementById('cl-email').value || '').trim();
+      const pass = (document.getElementById('cl-pass').value || '').trim();
+      const phone = (document.getElementById('cl-phone').value || '').trim();
+      if (!email || !pass) { showToast('Please enter both Email ID and Password'); return; }
+      portalState.clientUser = { name, email, phone };
+      try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(portalState.clientUser)); } catch (e) {}
+      renderClientPortal();
+      showToast(`Signed in as ${email}`);
+    });
+
+    document.getElementById('btn-client-demo').addEventListener('click', () => {
+      portalState.clientUser = { name: 'Sample Client', email: 'client@example.com', phone: '+91 9876543210' };
+      try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(portalState.clientUser)); } catch (e) {}
+      renderClientPortal();
+      showToast('Signed in with Demo Client account');
+    });
+
+    document.getElementById('btn-client-logout').addEventListener('click', () => {
+      portalState.clientUser = null;
+      try { localStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
+      renderClientPortal();
+    });
+
+    document.getElementById('btn-submit-inq').addEventListener('click', () => {
+      if (!portalState.clientUser) return;
+      const waPhone = (document.getElementById('inq-wa-phone').value || '').trim();
+      if (!waPhone) { showToast('Enter your WhatsApp number to start this inquiry'); return; }
+      portalState.clientUser.phone = waPhone;
+      saveUserToDB(portalState.clientUser);
+      const title = (document.getElementById('inq-title').value || '').trim() || `${state.cents} Cent ${state.bedrooms} BHK Inquiry`;
+      const notes = (document.getElementById('inq-notes').value || '').trim() || 'Requesting floor plan review and cost estimate.';
+      const list = getInquiries();
+      list.unshift({
+        id: 'inq_' + Date.now(),
+        clientName: portalState.clientUser.name,
+        clientEmail: portalState.clientUser.email,
+        clientPhone: waPhone,
+        title,
+        notes,
+        status: 'New',
+        createdAt: new Date().toLocaleDateString('en-IN'),
+        planSnapshot: JSON.parse(JSON.stringify(state)),
+        messages: [{ sender: 'client', text: notes, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]
+      });
+      setInquiries(list);
+      document.getElementById('inq-title').value = '';
+      document.getElementById('inq-notes').value = '';
+      renderClientPortal();
+      showToast('Inquiry post submitted to Admin');
+    });
+
+    document.getElementById('btn-whatsapp-inq').addEventListener('click', () => {
+      const title = (document.getElementById('inq-title').value || '').trim() || `${state.cents} Cent ${state.bedrooms} BHK Plan`;
+      const notes = (document.getElementById('inq-notes').value || '').trim() || 'Looking for house planning details.';
+      const msg = `Hello! House Plan Inquiry (${title})%0AClient: ${portalState.clientUser ? portalState.clientUser.email : 'Guest'}%0APlot: ${state.cents} Cents (${state.maxCovPct}% max coverage)%0ASpecs: ${state.bedrooms} BHK, ${state.floors} Floor(s)%0ANotes: ${encodeURIComponent(notes)}`;
+      const waNum = (portalState.adminWhatsapp || '919876543210').replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank', 'noopener');
+    });
+
+    // Admin Panel
+    function renderAdminPanel() {
+      document.getElementById('admin-auth-card').classList.toggle('hidden', portalState.adminUnlocked);
+      document.getElementById('admin-dash').classList.toggle('hidden', !portalState.adminUnlocked);
+      if (!portalState.adminUnlocked) return;
+
+      document.getElementById('adm-wa-num').value = portalState.adminWhatsapp || '';
+      const listEl = document.getElementById('adm-inq-list');
+      const all = getInquiries();
+      listEl.replaceChildren();
+
+      all.forEach(inq => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2.5';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <h3 class="text-xs font-bold text-slate-900"></h3>
+              <p class="text-[11px] text-slate-500">${inq.clientName} (${inq.clientEmail}) · ${inq.planSnapshot.cents} Cents · ${inq.planSnapshot.bedrooms} BHK</p>
+            </div>
+            <select class="text-[11px] border border-slate-300 rounded-lg px-2 py-1 bg-white" data-status>
+              <option value="New">New</option>
+              <option value="In Review">In Review</option>
+              <option value="Approved">Approved</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <p class="text-xs text-slate-700" data-notes></p>
+          <div class="space-y-1 max-h-36 overflow-y-auto border-t border-slate-100 pt-2" data-adm-chat></div>
+          <div class="flex gap-1.5">
+            <input type="text" placeholder="Admin reply..." class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5" data-adm-input>
+            <button type="button" class="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg" data-adm-send>Reply</button>
+          </div>
+          <div class="flex gap-2 pt-1 border-t border-slate-100">
+            <button type="button" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold py-1.5 rounded-lg" data-load-studio>Open Plan in 2D/3D Studio</button>
+          </div>
+        `;
+        card.querySelector('h3').textContent = inq.title;
+        card.querySelector('[data-notes]').textContent = inq.notes;
+        const stSel = card.querySelector('[data-status]');
+        stSel.value = inq.status || 'New';
+        stSel.addEventListener('change', () => {
+          const items = getInquiries();
+          const t = items.find(x => x.id === inq.id);
+          if (t) { t.status = stSel.value; setInquiries(items); showToast(`Status updated to ${stSel.value}`); }
+        });
+
+        const chatBox = card.querySelector('[data-adm-chat]');
+        (inq.messages || []).forEach(m => {
+          const div = document.createElement('div');
+          div.className = m.sender === 'admin'
+            ? 'text-[11px] bg-blue-50 text-blue-900 rounded px-2 py-1'
+            : 'text-[11px] bg-slate-100 text-slate-800 rounded px-2 py-1';
+          div.textContent = `${m.sender === 'admin' ? 'Admin' : inq.clientName} (${m.time}): ${m.text}`;
+          chatBox.appendChild(div);
+        });
+
+        card.querySelector('[data-adm-send]').addEventListener('click', () => {
+          const inp = card.querySelector('[data-adm-input]');
+          const txt = (inp.value || '').trim();
+          if (!txt) return;
+          const items = getInquiries();
+          const t = items.find(x => x.id === inq.id);
+          if (t) {
+            t.messages.push({ sender: 'admin', text: txt, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            setInquiries(items);
+            renderAdminPanel();
+          }
+        });
+
+        card.querySelector('[data-load-studio]').addEventListener('click', () => {
+          state = JSON.parse(JSON.stringify(inq.planSnapshot));
+          document.getElementById('in-cents').value = state.cents;
+          document.getElementById('in-cents-num').value = state.cents;
+          document.getElementById('in-cov').value = state.maxCovPct;
+          // bedrooms tracked in state
+          document.getElementById('in-floors').value = state.floors;
+          document.getElementById('in-finish').value = state.finishRate;
+          switchSection('studio');
+          showToast(`Loaded ${inq.clientName}'s plan in Studio`);
+        });
+
+        listEl.appendChild(card);
+      });
+    }
+
+    document.getElementById('btn-admin-login').addEventListener('click', () => {
+      const p = (document.getElementById('adm-pass').value || '').trim();
+      if (p === 'admin123') {
+        portalState.adminUnlocked = true;
+        document.getElementById('adm-pass').value = '';
+        renderAdminPanel();
+        showToast('Admin Panel unlocked');
+      } else {
+        showToast('Incorrect passcode (try admin123)');
+      }
+    });
+
+    document.getElementById('btn-admin-logout').addEventListener('click', () => {
+      portalState.adminUnlocked = false;
+      renderAdminPanel();
+    });
+
+    document.getElementById('btn-admin-save-wa').addEventListener('click', () => {
+      const v = (document.getElementById('adm-wa-num').value || '').trim();
+      if (!v) return;
+      portalState.adminWhatsapp = v;
+      try { localStorage.setItem(ADMIN_WA_KEY, v); } catch (e) {}
+      showToast('Admin WhatsApp number saved');
+    });
+
+    // --- Landing Gate & Registered Users Local Database ---
+    const USERS_DB_KEY = 'kerala_house_users_db_v1';
+
+    function getUsersDB() {
+      try {
+        const u = JSON.parse(localStorage.getItem(USERS_DB_KEY) || '[]');
+        if (Array.isArray(u)) return u;
+      } catch (e) {}
+      return [];
+    }
+    function saveUserToDB(user) {
+      const users = getUsersDB();
+      const idx = users.findIndex(x => x.email === user.email);
+      const record = Object.assign({}, user, { lastLogin: new Date().toLocaleString('en-IN') });
+      if (idx >= 0) users[idx] = record;
+      else users.unshift(record);
+      try { localStorage.setItem(USERS_DB_KEY, JSON.stringify(users)); } catch (e) {}
+    }
+
+    function enterPortal(targetSection) {
+      document.getElementById('landing-gate').classList.add('hidden');
+      document.getElementById('portal-header').classList.remove('hidden');
+      switchSection(targetSection || 'studio');
+    }
+
+    function exitToGate() {
+      portalState.clientUser = null;
+      portalState.adminUnlocked = false;
+      try { localStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
+      document.getElementById('portal-header').classList.add('hidden');
+      ['studio', 'client', 'admin'].forEach(k => document.getElementById('section-' + k).classList.add('hidden'));
+      document.getElementById('landing-gate').classList.remove('hidden');
+    }
+
+    const ADMIN_EMAIL = 'admin@gmail.com';
+    const ADMIN_PASS = 'admin123';
+
+    document.getElementById('btn-gate-signin').addEventListener('click', () => {
+      const name = (document.getElementById('gate-name').value || '').trim() || 'User';
+      const email = (document.getElementById('gate-email').value || '').trim().toLowerCase();
+      const pass = (document.getElementById('gate-pass').value || '').trim();
+      if (!email || !pass) { showToast('Please enter your Gmail / Email ID and Password'); return; }
+
+      if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+        portalState.clientUser = { name: name || 'Admin', email, isAdmin: true };
+        portalState.adminUnlocked = true;
+        document.getElementById('nav-admin').classList.remove('hidden');
+        try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(portalState.clientUser)); } catch (e) {}
+        enterPortal('admin');
+        showToast('Signed in as Admin');
+        return;
+      }
+
+      portalState.clientUser = { name, email, isAdmin: false };
+      portalState.adminUnlocked = false;
+      document.getElementById('nav-admin').classList.add('hidden');
+      saveUserToDB(portalState.clientUser);
+      try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(portalState.clientUser)); } catch (e) {}
+      enterPortal('studio');
+      showToast(`Signed in as ${email}`);
+    });
+
+    document.getElementById('btn-gate-google').addEventListener('click', () => {
+      portalState.clientUser = { name: 'Demo Client', email: 'client@gmail.com', isAdmin: false };
+      portalState.adminUnlocked = false;
+      document.getElementById('nav-admin').classList.add('hidden');
+      saveUserToDB(portalState.clientUser);
+      try { localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(portalState.clientUser)); } catch (e) {}
+      enterPortal('studio');
+      showToast('Signed in with Demo Gmail Account');
+    });
+
+    document.getElementById('btn-header-logout').addEventListener('click', exitToGate);
+
+    // Enhance renderAdminPanel to also display Registered Users
+    const _origRenderAdmin = renderAdminPanel;
+    renderAdminPanel = function() {
+      _origRenderAdmin();
+      if (!portalState.adminUnlocked) return;
+      const users = getUsersDB();
+      document.getElementById('adm-users-count').textContent = `${users.length} user(s)`;
+      const uList = document.getElementById('adm-users-list');
+      uList.replaceChildren();
+      if (!users.length) {
+        const span = document.createElement('span');
+        span.className = 'text-slate-400';
+        span.textContent = 'No users signed in yet.';
+        uList.appendChild(span);
+      } else {
+        users.forEach(u => {
+          const pill = document.createElement('div');
+          pill.className = 'bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800';
+          pill.textContent = `${u.name} · ${u.email}${u.phone ? ' · ' + u.phone : ''} (${u.lastLogin || ''})`;
+          uList.appendChild(pill);
+        });
+      }
+    };
+
+    // If session already exists, open straight into Studio
+    if (portalState.clientUser && portalState.clientUser.email) {
+      if (portalState.clientUser.isAdmin) {
+        portalState.adminUnlocked = true;
+        document.getElementById('nav-admin').classList.remove('hidden');
+        enterPortal('admin');
+      } else {
+        enterPortal('studio');
+      }
+    }
+  </script>
+</body>
+</html>
